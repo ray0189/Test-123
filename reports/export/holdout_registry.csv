@@ -1,0 +1,2 @@
+period_key,first_used_utc,experiment_id,strategy_key,uses
+XAUUSD:2025-07-01:2026-10-23,2026-10-23T12:58:00+00:00,3,M15:ema_pullback[] :: SLstruct+0.1|TPnone|T900 :: sess=all|htf>=-9|score>=65|vol=1,1

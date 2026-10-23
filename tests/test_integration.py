@@ -34,7 +34,8 @@ def researched(tmp_path_factory, data):  # noqa: ANN001
     vs = [v for v in research_variants(1) if v.family in ("sweep_reversal", "fvg_retest", "random_baseline")]
     grid = (vs, default_exits()[:14], default_filters()[:12])
     rules = SelectionRules(min_train_trades=20, min_val_trades=10, min_train_t=-99, min_val_t=-99, min_pf=0.0)
-    summary = run_research(data, s, SPLITS, rules, tmp / "reports", store, "synthetic", grid=grid)
+    summary = run_research(data, s, SPLITS, rules, tmp / "reports", store, "synthetic", grid=grid,
+                           timeframes=("M1", "M5"))
     return tmp, s, store, summary
 
 
@@ -44,7 +45,7 @@ def test_research_never_sees_test_period(researched) -> None:  # noqa: ANN001
     tr = pd.read_csv(tmp / "reports" / "candidate_trades_validation.csv")
     if len(tr):
         assert pd.to_datetime(tr["exit_time"]).max() < pd.Timestamp(SPLITS.test_start, tz="UTC")
-    assert summary["configs_evaluated"] == 7 * 14 * 12  # 3 sweep + 3 fvg + 1 random variants
+    assert summary["configs_evaluated"] == 2 * 7 * 14 * 12  # 2 timeframes x (3 sweep + 3 fvg + 1 random) variants
     assert (tmp / "reports" / "selected_strategy.json").exists()
     assert len(store.experiments()) >= 1
 

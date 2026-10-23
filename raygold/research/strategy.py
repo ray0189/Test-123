@@ -19,7 +19,8 @@ from raygold.backtest.simulator import REASONS, Costs, ExitSpec, simulate
 from raygold.features import Features
 from raygold.research.engine import attach_scores, select_sequential
 from raygold.research.grid import FilterSpec
-from raygold.signals.events import Variant, build_events
+from raygold.signals.events import Variant
+from raygold.signals.multitf import events_for
 
 
 @dataclass(frozen=True)
@@ -27,19 +28,20 @@ class StrategySpec:
     variant: Variant
     exit: ExitSpec
     filter: FilterSpec
+    tf: str = "M1"  # timeframe the patterns are detected on (execution is always M1)
 
     @property
     def key(self) -> str:
-        return f"{self.variant.key} :: {self.exit.key} :: {self.filter.key}"
+        return f"{self.tf}:{self.variant.key} :: {self.exit.key} :: {self.filter.key}"
 
     def to_dict(self) -> dict:
-        return {"variant": {"family": self.variant.family, "params": dict(self.variant.params)},
+        return {"variant": {"family": self.variant.family, "params": dict(self.variant.params)}, "tf": self.tf,
                 "exit": self.exit.as_dict(), "filter": self.filter.as_dict(), "key": self.key}
 
     @staticmethod
     def from_dict(d: dict) -> "StrategySpec":
         v = Variant(d["variant"]["family"], tuple(sorted(d["variant"]["params"].items())))
-        return StrategySpec(v, ExitSpec(**d["exit"]), FilterSpec(**d["filter"]))
+        return StrategySpec(v, ExitSpec(**d["exit"]), FilterSpec(**d["filter"]), d.get("tf", "M1"))
 
     def save(self, path: str | Path, extra: dict | None = None) -> None:
         payload = {"strategy": self.to_dict(), **(extra or {})}
@@ -60,7 +62,7 @@ def run_strategy(f: Features, spec: StrategySpec, costs: Costs, start: str | Non
     Trades still open at the end of the data are closed at the last bar
     (reason ``data_end``).
     """
-    ev = build_events(f, spec.variant, start_idx=warmup, end_idx=len(f) - 1 - entry_delay)
+    ev = events_for(f, spec.variant, spec.tf, warmup=warmup, end_idx=len(f) - 1 - entry_delay)
     ev = attach_scores(f, ev, costs)
     if len(ev) == 0:
         return pd.DataFrame()

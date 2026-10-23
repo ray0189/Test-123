@@ -6,6 +6,7 @@
     raygold backtest        run a strategy file on a date range (test period refused unless burned)
     raygold feasibility     position-sizing / margin feasibility for the configured account
     raygold scan            scanner + dashboard (READ_ONLY by default; --mode PAPER/DEMO)
+    raygold report          regenerate reports/RESEARCH_REPORT.md from result files
     raygold export          export SQLite tables to CSV/JSON
     raygold halt|resume     emergency halt switch
 """
@@ -139,8 +140,11 @@ def cmd_feasibility(args: argparse.Namespace) -> int:
     for price in (2000, 3000, 4000):
         for lev in (20, 30, 100, 500):
             m = margin_required(sym, sym.volume_min, price, lev, fx)
-            print(f"  gold {price}: margin for 0.01 lot at 1:{lev} = {m:6.2f} {s.broker.account_currency}"
-                  f" -> max concurrent min-lot positions by margin: {int(s.risk.starting_equity // m) if m else 0}")
+            raw = int(s.risk.starting_equity // m) if m else 0
+            safe = int(s.risk.starting_equity / (m * s.risk.min_margin_level_pct / 100)) if m else 0
+            print(f"  gold {price}: margin for 0.01 lot at 1:{lev:<3} = {m:6.2f} {s.broker.account_currency}"
+                  f" -> max min-lot positions: {raw:2d} (margin) / {safe:2d} (keeping margin level >= "
+                  f"{s.risk.min_margin_level_pct:.0f}%)")
     return 0
 
 
@@ -226,6 +230,13 @@ def cmd_scan(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_report(args: argparse.Namespace) -> int:
+    from raygold.reporting.report import write_report
+
+    print(write_report(args.reports))
+    return 0
+
+
 def cmd_export(args: argparse.Namespace) -> int:
     from raygold.storage import Store
 
@@ -308,6 +319,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--server-utc-offset", type=float, default=0.0)
     p.add_argument("--max-steps", type=int, default=0)
     p.set_defaults(fn=cmd_scan)
+
+    p = sub.add_parser("report")
+    p.add_argument("--reports", default="reports")
+    p.set_defaults(fn=cmd_report)
 
     p = sub.add_parser("export")
     p.add_argument("--out", default="reports/export")

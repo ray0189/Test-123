@@ -1,0 +1,26 @@
+{
+  "strategy": "M1:ict_model[k=5] :: SLstruct+0.1|TPnet+0.1|T240 :: sess=overlap|htf>=1|score>=65|vol=0",
+  "period": [
+    "2024-07-01",
+    "2025-07-01"
+  ],
+  "trades": 160,
+  "ambiguous_stop_bars": 1,
+  "tick_resolved": {
+    "target": 1
+  },
+  "bar_level": {
+    "win_rate": 0.85625,
+    "expectancy_r": -0.12161,
+    "expectancy_r_lo": -0.18096,
+    "expectancy_r_hi": -0.06831,
+    "profit_factor": 0.18491
+  },
+  "tick_adjusted": {
+    "win_rate": 0.8625,
+    "expectancy_r": -0.115,
+    "expectancy_r_lo": -0.17225,
+    "expectancy_r_hi": -0.06248,
+    "profit_factor": 0.19444
+  }
+}

@@ -140,7 +140,8 @@ def detect(f: Features, v: Variant, seed: int = 7) -> tuple[np.ndarray, np.ndarr
             s_sweep = _bars_since(sw, d)
             s_choch = _bars_since(choch, d)
             # sweep must precede the choch: sweep age > choch age, gap <= 30
-            ok = (fvg_rt == d) & (s_choch <= 60) & (s_sweep > s_choch) & (s_sweep - s_choch <= 30)
+            with np.errstate(invalid="ignore"):  # inf - inf where neither event has occurred yet
+                ok = (fvg_rt == d) & (s_choch <= 60) & (s_sweep > s_choch) & (s_sweep - s_choch <= 30)
             sig[ok] = d
             # structural stop beyond the sweep extreme
             sweep_ext = pd.Series(np.where(sw == d, sw_ref, np.nan)).ffill().to_numpy()

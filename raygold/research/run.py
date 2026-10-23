@@ -22,7 +22,7 @@ from raygold.data.loader import slice_period
 from raygold.features import build_features
 from raygold.research import protocol as P
 from raygold.research.grid import FilterSpec, default_exits, default_filters, research_variants
-from raygold.research.engine import run_sweep
+from raygold.research.engine import SweepResult, run_sweep
 from raygold.research.stats import summarise
 from raygold.research.strategy import StrategySpec, run_strategy
 from raygold.risk.sizing import SymbolSpec
@@ -44,9 +44,10 @@ def symbol_from_settings(s: Settings) -> SymbolSpec:
                       b.volume_max, b.stops_level_points, b.point)
 
 
-def spec_from_row(row: pd.Series, variants: list[Variant], exits: list, filters: list[FilterSpec]) -> StrategySpec:
+def spec_from_row(row: pd.Series, grids: dict[str, tuple[list[Variant], list, list[FilterSpec]]]) -> StrategySpec:
+    variants, exits, filters = grids[row["tf"]]
     v = next(x for x in variants if x.key == row["variant"])
-    return StrategySpec(v, exits[int(row["exit_id"])][0], filters[int(row["filter_id"])])
+    return StrategySpec(v, exits[int(row["exit_id"])][0], filters[int(row["filter_id"])], row["tf"])
 
 
 def stress_costs(base: Costs) -> dict[str, tuple[Costs, int]]:
@@ -57,6 +58,8 @@ def stress_costs(base: Costs) -> dict[str, tuple[Costs, int]]:
         "commission_x2": (Costs(base.commission * 2, base.slippage, base.max_gap_minutes), 0),
         "latency_1bar": (base, 1),
         "all_adverse": (Costs(base.commission * 2, base.slippage * 3, base.max_gap_minutes), 1),
+        # Favourable sensitivity (NOT a stress): a zero-commission account paying only the spread.
+        "favourable_no_commission": (Costs(0.0, base.slippage, base.max_gap_minutes), 0),
     }
 
 
@@ -67,7 +70,8 @@ def detailed_stats(trades: pd.DataFrame) -> dict:
 
 
 def run_research(df: pd.DataFrame, settings: Settings, splits: P.Splits, rules: P.SelectionRules, out_dir: str | Path,
-                 store: Store, data_hash: str, n_random: int = 3, grid: tuple | None = None) -> dict:
+                 store: Store, data_hash: str, n_random: int = 3, grid: tuple | None = None,
+                 timeframes: tuple[str, ...] = ("M1", "M5", "M15")) -> dict:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
@@ -76,8 +80,12 @@ def run_research(df: pd.DataFrame, settings: Settings, splits: P.Splits, rules: 
     log.info("research data %s .. %s (%d bars)", research_df["time"].iloc[0], research_df["time"].iloc[-1], len(research_df))
     f = build_features(research_df)
     costs = costs_from_settings(settings)
-    variants, exits, filters = grid if grid else (research_variants(n_random), default_exits(), default_filters())
-    res = run_sweep(f, variants, exits, filters, costs)
+    grids = {tf: (grid if grid else (research_variants(n_random, tf), default_exits(tf), default_filters()))
+             for tf in timeframes}
+    parts = [run_sweep(f, *grids[tf], costs, tf=tf) for tf in timeframes]
+    res = SweepResult(pd.concat([p.configs for p in parts], ignore_index=True),
+                      np.concatenate([p.monthly for p in parts]), np.concatenate([p.dd_full for p in parts]),
+                      parts[0].months, {"seconds": sum(p.meta["seconds"] for p in parts)})
     log.info("sweep: %d configurations in %.0fs", len(res.configs), res.meta["seconds"])
     m = P.period_metrics(res, splits)
     m.to_parquet(out / "all_configs.parquet", index=False)
@@ -106,7 +114,9 @@ def run_research(df: pd.DataFrame, settings: Settings, splits: P.Splits, rules: 
         "data": {"bars": int(len(research_df)), "start": str(research_df["time"].iloc[0]),
                  "end": str(research_df["time"].iloc[-1]), "hash": data_hash},
         "splits": splits.as_dict(), "rules": rules.as_dict(), "costs": asdict(costs),
-        "configs_evaluated": int(len(m)), "variants": len(variants), "exit_specs": len(exits), "filters": len(filters),
+        "configs_evaluated": int(len(m)), "timeframes": list(timeframes),
+        "variants": len(grids[timeframes[0]][0]), "exit_specs": len(grids[timeframes[0]][1]),
+        "filters": len(grids[timeframes[0]][2]),
         "null": null, "walk_forward": wf_sum, "stage_a_count": int(len(stage_a)), "stage_b_count": int(len(stage_b)),
     }
 
@@ -120,7 +130,7 @@ def run_research(df: pd.DataFrame, settings: Settings, splits: P.Splits, rules: 
         pool = stage_a if len(stage_a) else m[(m["family"] != "random_baseline") & (m["train_n"] >= rules.min_train_trades)]
         key = "val_t" if len(stage_a) else "train_t"
         candidate_row = pool.sort_values(key, ascending=False).iloc[0]
-    spec = spec_from_row(candidate_row, variants, exits, filters)
+    spec = spec_from_row(candidate_row, grids)
     summary["candidate"] = {"key": spec.key, "validated": not fallback,
                             "neighbour_frac": float(candidate_row.get("neighbour_frac", float("nan")))}
 

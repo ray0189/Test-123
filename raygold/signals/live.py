@@ -11,7 +11,8 @@ from raygold.backtest.simulator import Costs, plan_levels
 from raygold.features import build_features
 from raygold.research.engine import attach_scores
 from raygold.research.strategy import StrategySpec
-from raygold.signals.events import build_events, ensure_context
+from raygold.signals.events import ensure_context
+from raygold.signals.multitf import events_for
 from raygold.signals.scoring import components
 
 
@@ -78,7 +79,7 @@ def snapshot(df: pd.DataFrame, bid: float, ask: float) -> tuple[MarketSnapshot, 
 def latest_signal(f, spec: StrategySpec, costs: Costs, bid: float, ask: float) -> LiveSignal | None:  # type: ignore[no-untyped-def]
     """Signal on the last completed bar of ``f`` (a Features bundle), or None."""
     n = len(f)
-    ev = build_events(f, spec.variant, start_idx=300, end_idx=n)
+    ev = events_for(f, spec.variant, spec.tf, warmup=300, end_idx=n)
     if len(ev) == 0 or ev["idx"].iloc[-1] != n - 1:
         return None
     # score the whole window so the 'historical performance' component of the

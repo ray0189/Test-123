@@ -76,24 +76,32 @@ class ExitCoord:
     mgmt: str
 
 
-def default_exits() -> list[tuple[ExitSpec, ExitCoord]]:
+# Holding-time limits in M1 bars, scaled with the signal timeframe.
+MAX_HOLD = {"M1": (240, 60), "M5": (960, 300), "M15": (1440, 900)}
+
+
+def default_exits(tf: str = "M1") -> list[tuple[ExitSpec, ExitCoord]]:
+    hold, short = MAX_HOLD[tf]
     out: list[tuple[ExitSpec, ExitCoord]] = []
     for si, (slm, slp) in enumerate(SL_CHOICES):
         for ti, r in enumerate(TP_R_CHOICES):
-            out.append((ExitSpec(slm, slp, TP_R, r), ExitCoord(si, ti, "none")))
-        out.append((ExitSpec(slm, slp, TP_LIQUIDITY, 1.0), ExitCoord(si, -1, "liquidity")))
-        out.append((ExitSpec(slm, slp, TP_NETPOS, 0.10), ExitCoord(si, -1, "netpos")))
-        out.append((ExitSpec(slm, slp, TP_ATR, 1.0), ExitCoord(si, -1, "atr_tp")))
-        out.append((ExitSpec(slm, slp, TP_R, 2.0, be_trigger_r=1.0), ExitCoord(si, -1, "be1_tp2")))
-        out.append((ExitSpec(slm, slp, TP_R, 1.0, be_trigger_r=0.5), ExitCoord(si, -1, "be05_tp1")))
-        out.append((ExitSpec(slm, slp, TP_NONE, 0.0, trail_atr=1.5), ExitCoord(si, -1, "trail")))
-        out.append((ExitSpec(slm, slp, TP_R, 2.0, partial_r=1.0, partial_frac=0.5), ExitCoord(si, -1, "partial")))
-        out.append((ExitSpec(slm, slp, TP_NONE, 0.0, max_hold=60), ExitCoord(si, -1, "time60")))
+            out.append((ExitSpec(slm, slp, TP_R, r, max_hold=hold), ExitCoord(si, ti, "none")))
+        out.append((ExitSpec(slm, slp, TP_LIQUIDITY, 1.0, max_hold=hold), ExitCoord(si, -1, "liquidity")))
+        out.append((ExitSpec(slm, slp, TP_NETPOS, 0.10, max_hold=hold), ExitCoord(si, -1, "netpos")))
+        out.append((ExitSpec(slm, slp, TP_ATR, 1.0, max_hold=hold), ExitCoord(si, -1, "atr_tp")))
+        out.append((ExitSpec(slm, slp, TP_R, 2.0, be_trigger_r=1.0, max_hold=hold), ExitCoord(si, -1, "be1_tp2")))
+        out.append((ExitSpec(slm, slp, TP_R, 1.0, be_trigger_r=0.5, max_hold=hold), ExitCoord(si, -1, "be05_tp1")))
+        out.append((ExitSpec(slm, slp, TP_NONE, 0.0, trail_atr=1.5, max_hold=hold), ExitCoord(si, -1, "trail")))
+        out.append((ExitSpec(slm, slp, TP_R, 2.0, partial_r=1.0, partial_frac=0.5, max_hold=hold), ExitCoord(si, -1, "partial")))
+        out.append((ExitSpec(slm, slp, TP_NONE, 0.0, max_hold=short), ExitCoord(si, -1, "time_short")))
     return out
 
 
-def research_variants(n_random: int = 3) -> list[Variant]:
+def research_variants(n_random: int = 3, tf: str = "M1") -> list[Variant]:
+    """Pattern variants plus ``n_random`` random-entry baselines (rate scaled to ~same events per day)."""
+    from raygold.data.timeframes import TF_MINUTES
+
     vs = [v for v in default_variants() if v.family != "random_baseline"]
     for s in range(n_random):
-        vs.append(_v("random_baseline", rate=0.004, seed=s))
+        vs.append(_v("random_baseline", rate=min(0.004 * TF_MINUTES[tf], 0.5), seed=s))
     return vs

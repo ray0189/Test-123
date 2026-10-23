@@ -4,6 +4,9 @@ __pycache__/
 .pytest_cache/
 data/
 state/
-reports/export/
+
 scripts/_dl_bg.py
 *.tmp
+# full per-configuration tables are large and reproducible with `raygold research`
+reports/**/all_configs.parquet
+reports/all_configs.parquet

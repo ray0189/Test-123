@@ -34,6 +34,12 @@ class Features:
     ac: np.ndarray
     vol: np.ndarray
     arr: dict[str, np.ndarray] = field(default_factory=dict)
+    cache: dict = field(default_factory=dict)  # derived objects, e.g. higher-timeframe signal features
+
+    def to_frame(self) -> pd.DataFrame:
+        return pd.DataFrame({"time": self.time, "open": self.o, "high": self.h, "low": self.l, "close": self.c,
+                             "ask_open": self.ao, "ask_high": self.ah, "ask_low": self.al, "ask_close": self.ac,
+                             "volume": self.vol})
 
     def __len__(self) -> int:
         return len(self.c)

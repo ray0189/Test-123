@@ -1,0 +1,109 @@
+{
+  "strategy": {
+    "variant": {
+      "family": "choch_reversal",
+      "params": {
+        "k": 5
+      }
+    },
+    "exit": {
+      "sl_mode": 0,
+      "sl_param": 0.1,
+      "tp_mode": 0,
+      "tp_param": 3.0,
+      "be_trigger_r": 0.0,
+      "trail_atr": 0.0,
+      "partial_r": 0.0,
+      "partial_frac": 0.5,
+      "max_hold": 240,
+      "min_stop_atr": 0.3,
+      "max_stop_atr": 4.0
+    },
+    "filter": {
+      "session": "overlap",
+      "min_htf": 2,
+      "min_score": 0,
+      "vol_filter": 1
+    },
+    "key": "choch_reversal[k=5] :: SLstruct+0.1|TP3R|T240 :: sess=overlap|htf>=2|score>=0|vol=1"
+  },
+  "validated": false,
+  "splits": {
+    "train_start": "2022-01-01",
+    "val_start": "2024-07-01",
+    "test_start": "2025-07-01",
+    "test_end": "2026-10-23"
+  },
+  "train": {
+    "trades": 352,
+    "wins": 106,
+    "losses": 246,
+    "scratches": 0,
+    "win_rate": 0.30114,
+    "win_rate_lo": 0.25557,
+    "win_rate_hi": 0.351,
+    "expectancy_r": 0.01826,
+    "expectancy_r_lo": -0.15191,
+    "expectancy_r_hi": 0.19526,
+    "t_stat": 0.19595,
+    "profit_factor": 1.0253,
+    "avg_win_r": 2.45777,
+    "avg_loss_r": -1.03291,
+    "total_r": 6.42876,
+    "max_dd_r": 27.42662,
+    "trading_days": 298,
+    "trades_per_day": 1.18121,
+    "breakeven_win_rate": 0.2959
+  },
+  "validation": {
+    "trades": 143,
+    "wins": 45,
+    "losses": 98,
+    "scratches": 0,
+    "win_rate": 0.31469,
+    "win_rate_lo": 0.24427,
+    "win_rate_hi": 0.3948,
+    "expectancy_r": 0.01007,
+    "expectancy_r_lo": -0.25016,
+    "expectancy_r_hi": 0.28204,
+    "t_stat": 0.0718,
+    "profit_factor": 1.01447,
+    "avg_win_r": 2.24436,
+    "avg_loss_r": -1.01588,
+    "total_r": 1.44026,
+    "max_dd_r": 11.89975,
+    "trading_days": 115,
+    "trades_per_day": 1.24348,
+    "breakeven_win_rate": 0.3116
+  },
+  "selection_row": {
+    "family": "choch_reversal",
+    "variant": "choch_reversal[k=5]",
+    "exit_id": 5,
+    "exit": "SLstruct+0.1|TP3R|T240",
+    "sl_idx": 0,
+    "tp_idx": 5,
+    "mgmt": "none",
+    "filter_id": 89,
+    "session": "overlap",
+    "min_htf": 2,
+    "min_score": 0,
+    "vol_filter": 1,
+    "train_n": 352.0,
+    "val_n": 143.0,
+    "train_win_rate": 0.30113636363636365,
+    "val_win_rate": 0.3146853146853147,
+    "train_exp_r": 0.018263533161106436,
+    "val_exp_r": 0.010071736271981593,
+    "train_sd_r": 1.679108367005551,
+    "val_sd_r": 1.631048485942403,
+    "train_t": 0.204069172549429,
+    "val_t": 0.07384234712465869,
+    "train_pf": 1.0253006424577598,
+    "val_pf": 1.0144668352098225,
+    "train_total_r": 6.428763672709465,
+    "val_total_r": 1.4402582868933678,
+    "train_pos_months": 0.5,
+    "val_pos_months": 0.4166666666666667
+  }
+}

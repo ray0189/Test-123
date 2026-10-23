@@ -1,0 +1,1 @@
+family,tf,variant,exit_id,exit,sl_idx,tp_idx,mgmt,filter_id,session,min_htf,min_score,vol_filter,train_n,val_n,train_win_rate,val_win_rate,train_exp_r,val_exp_r,train_sd_r,val_sd_r,train_t,val_t,train_pf,val_pf,train_total_r,val_total_r,train_pos_months,val_pos_months

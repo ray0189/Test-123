@@ -24,7 +24,8 @@ from numba import njit, prange
 from raygold.backtest.simulator import Costs, ExitSpec, simulate
 from raygold.features import Features
 from raygold.research.grid import ExitCoord, FilterSpec
-from raygold.signals.events import Variant, build_events
+from raygold.signals.events import Variant
+from raygold.signals.multitf import events_for
 from raygold.signals.scoring import ScoreWeights, history_scores, score
 
 log = logging.getLogger(__name__)
@@ -133,7 +134,7 @@ class SweepResult:
 
 
 def run_sweep(f: Features, variants: list[Variant], exits: list[tuple[ExitSpec, ExitCoord]],
-              filters: list[FilterSpec], costs: Costs, warmup: int = 1500) -> SweepResult:
+              filters: list[FilterSpec], costs: Costs, warmup: int = 1500, tf: str = "M1") -> SweepResult:
     t0 = time.time()
     month_ids = f["month_id"]
     m0 = int(month_ids.min())
@@ -143,7 +144,7 @@ def run_sweep(f: Features, variants: list[Variant], exits: list[tuple[ExitSpec, 
     blocks = []
     dds = []
     for vi, v in enumerate(variants):
-        ev = build_events(f, v, start_idx=warmup)
+        ev = events_for(f, v, tf, warmup=warmup)
         ev = attach_scores(f, ev, costs)
         if len(ev) == 0:
             log.warning("variant %s produced no events", v.key)
@@ -162,10 +163,10 @@ def run_sweep(f: Features, variants: list[Variant], exits: list[tuple[ExitSpec, 
             blocks.append(stats.astype(np.float32))
             dds.append(dd)
             for fi, flt in enumerate(filters):
-                rows.append((v.family, v.key, ei, spec.key, coord.sl_idx, coord.tp_idx, coord.mgmt, fi, flt.session,
+                rows.append((v.family, tf, v.key, ei, spec.key, coord.sl_idx, coord.tp_idx, coord.mgmt, fi, flt.session,
                              flt.min_htf, flt.min_score, flt.vol_filter))
-        log.info("variant %d/%d %s: %d events, %.0fs elapsed", vi + 1, len(variants), v.key, len(ev), time.time() - t0)
-    configs = pd.DataFrame(rows, columns=["family", "variant", "exit_id", "exit", "sl_idx", "tp_idx", "mgmt",
+        log.info(f"[{tf}] " + "variant %d/%d %s: %d events, %.0fs elapsed", vi + 1, len(variants), v.key, len(ev), time.time() - t0)
+    configs = pd.DataFrame(rows, columns=["family", "tf", "variant", "exit_id", "exit", "sl_idx", "tp_idx", "mgmt",
                                           "filter_id", "session", "min_htf", "min_score", "vol_filter"])
     monthly = np.concatenate(blocks, axis=0)
     return SweepResult(configs, monthly, np.concatenate(dds), months, {"seconds": time.time() - t0})

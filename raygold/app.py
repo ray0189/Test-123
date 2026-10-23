@@ -56,7 +56,8 @@ class Scanner:
         if not p.exists():
             return {}
         data = json.loads(p.read_text())
-        out = {}
+        out = {"candidate validated": "YES" if data.get("validated") else
+               "NO - failed pre-registered train/validation gates (research only)"}
         for period in ("validation", "test"):
             st = data.get(period)
             if st:

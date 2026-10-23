@@ -1,0 +1,24 @@
+{
+  "strategy": "M1:choch_reversal[k=5] :: SLstruct+0.1|TP0.25R|T240 :: sess=all|htf>=2|score>=55|vol=1",
+  "period": [
+    "2024-07-01",
+    "2025-07-01"
+  ],
+  "trades": 318,
+  "ambiguous_stop_bars": 0,
+  "tick_resolved": {},
+  "bar_level": {
+    "win_rate": 0.72642,
+    "expectancy_r": -0.1208,
+    "expectancy_r_lo": -0.18493,
+    "expectancy_r_hi": -0.06228,
+    "profit_factor": 0.57722
+  },
+  "tick_adjusted": {
+    "win_rate": 0.72642,
+    "expectancy_r": -0.1208,
+    "expectancy_r_lo": -0.18493,
+    "expectancy_r_hi": -0.06228,
+    "profit_factor": 0.57722
+  }
+}

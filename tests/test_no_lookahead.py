@@ -113,3 +113,26 @@ def test_pivots_confirmed_k_bars_later() -> None:
     ph, _ = confirmed_pivots(h, l, 3)
     assert np.isnan(ph[:6]).all()
     assert ph[6] == 9.0  # pivot at bar 3 known at bar 6
+
+
+@pytest.mark.parametrize("tf", ["M5", "M15"])
+def test_higher_tf_signals_do_not_use_future_bars(synth: pd.DataFrame, tf: str) -> None:
+    """Events detected on M5/M15 bars, mapped to M1, must not change when later M1 bars change."""
+    from raygold.signals.multitf import events_for
+
+    cut = 8003  # deliberately inside an M5/M15 bucket
+    f_full = build_features(synth)
+    f_pert = build_features(_perturb_after(synth, cut))
+    f_trunc = build_features(synth.iloc[:cut].reset_index(drop=True))
+    for v in default_variants()[:10]:
+        e1 = events_for(f_full, v, tf, warmup=300)
+        e2 = events_for(f_pert, v, tf, warmup=300)
+        e3 = events_for(f_trunc, v, tf, warmup=300, end_idx=cut)
+        for other in (e2, e3):
+            a = e1[e1["idx"] < cut - 1].reset_index(drop=True)
+            b = other[other["idx"] < cut - 1].reset_index(drop=True)
+            pd.testing.assert_frame_equal(a, b, check_dtype=False)
+        # a signal mapped to M1 bar i must come from a bucket that closed by the end of bar i
+        fs_close = f_full.cache[f"sig_{tf}"]["minute"][e1["sig_idx"].to_numpy()] + {"M5": 5, "M15": 15}[tf]
+        assert (fs_close <= f_full["minute"][e1["idx"].to_numpy()] + 1).all()
+        assert (f_full["minute"][e1["idx"].to_numpy() + 1] >= fs_close).all()

@@ -107,7 +107,8 @@ def _variant_param(variant_key: str) -> tuple[str, float | None]:
 def neighbours(m: pd.DataFrame, row: pd.Series) -> pd.DataFrame:
     """One-step neighbours of a config in the discrete parameter space."""
     sel = []
-    same_ve = (m["variant"] == row["variant"]) & (m["exit_id"] == row["exit_id"])
+    same_tf = m["tf"] == row["tf"]
+    same_ve = same_tf & (m["variant"] == row["variant"]) & (m["exit_id"] == row["exit_id"])
     dims = {"session": SESSION_SETS, "min_htf": HTF_MIN, "min_score": SCORE_MIN, "vol_filter": VOL_FILTER}
     for dim, vals in dims.items():
         vals = list(vals)
@@ -118,7 +119,7 @@ def neighbours(m: pd.DataFrame, row: pd.Series) -> pd.DataFrame:
                 for other in dims:
                     cond &= (m[other] == (vals[j] if other == dim else row[other]))
                 sel.append(m[cond])
-    same_vf = (m["variant"] == row["variant"]) & (m["filter_id"] == row["filter_id"])
+    same_vf = same_tf & (m["variant"] == row["variant"]) & (m["filter_id"] == row["filter_id"])
     if row["tp_idx"] >= 0:
         for dt in (-1, 1):
             sel.append(m[same_vf & (m["sl_idx"] == row["sl_idx"]) & (m["tp_idx"] == row["tp_idx"] + dt)])
@@ -126,7 +127,7 @@ def neighbours(m: pd.DataFrame, row: pd.Series) -> pd.DataFrame:
         sel.append(m[same_vf & (m["sl_idx"] == row["sl_idx"] + ds) & (m["tp_idx"] == row["tp_idx"]) & (m["mgmt"] == row["mgmt"])])
     pk, pv = _variant_param(row["variant"])
     if pv is not None:
-        fam = m[(m["family"] == row["family"]) & (m["exit_id"] == row["exit_id"]) & (m["filter_id"] == row["filter_id"]) & (m["variant"] != row["variant"])]
+        fam = m[same_tf & (m["family"] == row["family"]) & (m["exit_id"] == row["exit_id"]) & (m["filter_id"] == row["filter_id"]) & (m["variant"] != row["variant"])]
         vals = sorted({_variant_param(v)[1] for v in fam["variant"].unique()} | {pv})
         i = vals.index(pv)
         adj = {vals[j] for j in (i - 1, i + 1) if 0 <= j < len(vals)}
@@ -210,7 +211,7 @@ def walk_forward(res: SweepResult, splits: Splits, rules: SelectionRules, is_mon
             best = int(np.argmax(np.where(ok, ism_metrics["t"].to_numpy(), -np.inf)))
             oos = res.monthly[best][oosm]
             n = float(oos[:, S_N].sum())
-            fold.update({"config_row": best, "variant": cfg.iloc[best]["variant"], "exit": cfg.iloc[best]["exit"],
+            fold.update({"config_row": best, "variant": f"{cfg.iloc[best]['tf']}:{cfg.iloc[best]['variant']}", "exit": cfg.iloc[best]["exit"],
                          "is_t": float(ism_metrics["t"].iloc[best]), "is_exp_r": float(ism_metrics["exp_r"].iloc[best]),
                          "oos_n": n, "oos_wins": float(oos[:, 1].sum()), "oos_total_r": float(oos[:, S_SUM].sum()),
                          "oos_sumsq": float(oos[:, 3].sum())})
@@ -236,19 +237,19 @@ def walk_forward_summary(wf: pd.DataFrame) -> dict:
 def family_ranking(m: pd.DataFrame, rules: SelectionRules) -> pd.DataFrame:
     """Honest comparison of pattern families: best-by-train config and the family-wide picture."""
     rows = []
-    for fam, g in m.groupby("family"):
+    for (fam, tf), g in m.groupby(["family", "tf"]):
         big = g[g["train_n"] >= rules.min_train_trades]
         if len(big) == 0:
-            rows.append({"family": fam, "configs": len(g)})
+            rows.append({"family": fam, "tf": tf, "configs": len(g)})
             continue
         best = big.sort_values("train_t", ascending=False).iloc[0]
         rows.append({
-            "family": fam, "configs": len(g), "configs_with_min_trades": len(big),
+            "family": fam, "tf": tf, "configs": len(g), "configs_with_min_trades": len(big),
             "frac_pos_train": float((big["train_exp_r"] > 0).mean()),
             "frac_pos_both": float(((big["train_exp_r"] > 0) & (big["val_exp_r"] > 0)).mean()),
             "median_train_exp_r": float(big["train_exp_r"].median()),
             "median_val_exp_r": float(big["val_exp_r"].median()),
-            "best_cfg": f"{best['variant']} :: {best['exit']} :: s={best['session']},htf>={best['min_htf']},score>={best['min_score']},vol={best['vol_filter']}",
+            "best_cfg": f"{tf}:{best['variant']} :: {best['exit']} :: s={best['session']},htf>={best['min_htf']},score>={best['min_score']},vol={best['vol_filter']}",
             "best_train_n": int(best["train_n"]), "best_train_wr": float(best["train_win_rate"]),
             "best_train_exp_r": float(best["train_exp_r"]), "best_train_t": float(best["train_t"]),
             "best_val_n": int(best["val_n"]), "best_val_wr": float(best["val_win_rate"]),
