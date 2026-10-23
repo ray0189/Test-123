@@ -1,0 +1,53 @@
+# RayGold configuration.  Every key can be overridden with an environment
+# variable: RAYGOLD_<SECTION>__<KEY>, e.g. RAYGOLD_RISK__MAX_POSITIONS=5.
+# Broker credentials are NEVER placed here; set MT5_LOGIN / MT5_PASSWORD /
+# MT5_SERVER (and optionally MT5_TERMINAL_PATH) in the environment.
+
+mode: READ_ONLY          # READ_ONLY | PAPER | DEMO   (LIVE is disabled by default)
+poll_seconds: 5
+log_level: INFO
+log_json: true
+
+broker:
+  symbol: XAUUSD
+  contract_size: 100       # research fallback; live runs query symbol_info
+  tick_size: 0.01
+  tick_value_usd: 1.0
+  volume_min: 0.01
+  volume_step: 0.01
+  volume_max: 50
+  stops_level_points: 0
+  point: 0.01
+  leverage: 100
+  account_currency: GBP
+  gbpusd: 1.27
+  commission_usd_per_lot_round_turn: 7.0
+  slippage_price: 0.05
+
+risk:
+  starting_equity: 100.0
+  risk_per_trade: 1.0
+  max_positions: 25
+  max_aggregate_risk: 5.0
+  daily_loss_limit: 3.0
+  max_drawdown_pct: 0.15
+  max_spread_price: 0.60
+  min_margin_level_pct: 300
+  stop_out_level_pct: 50
+  duplicate_window_minutes: 15
+  allowed_sessions: [london, newyork]
+  news_blackout_minutes: 30
+  news_calendar_path: config/news_events.csv
+  halt_file: state/HALT
+
+signal:
+  timeframe: M1
+  min_confidence: 0
+  min_rr: 0.0
+  strategy_file: reports/selected_strategy.json
+  lookback_bars: 8000
+
+storage:
+  db_path: state/raygold.sqlite
+  state_path: state/risk_state.json
+  reports_dir: reports
